@@ -16,16 +16,17 @@ class TestReservaDeHorario(unittest.TestCase):
     def test_listar_horario_livre(self):
         # Critério 1: lista apenas os horários livres da disciplina
 
-        livre = Horario("Cálculo", MONITORES["Cálculo"], self.inicio)
+        calculo = Horario("Cálculo", MONITORES["Cálculo"], self.inicio)
         ocupado = Horario("Cálculo", MONITORES["Cálculo"], self.inicio, estado=RESERVADO)
+        cancelado = Horario("Cálculo", MONITORES["Cálculo"], self.inicio, estado=CANCELADO)
         fisica = Horario("Física", MONITORES["Física"], self.inicio)
         poo = Horario("POO", MONITORES["POO"], self.inicio)
         estruturas = Horario("Estruturas de Dados",
                              MONITORES["Estruturas de Dados"], self.inicio)
-        for h in (livre, ocupado, fisica, poo, estruturas):
+        for h in (calculo, ocupado, cancelado, fisica, poo, estruturas):
             self.agenda.adicionar_horario(h)
 
-        self.assertEqual(self.agenda.listar_horarios_livres("Cálculo"), [livre])
+        self.assertEqual(self.agenda.listar_horarios_livres("Cálculo"), [calculo])
         self.assertEqual(self.agenda.listar_horarios_livres("Física"), [fisica])
         self.assertEqual(self.agenda.listar_horarios_livres("POO"), [poo])
         self.assertEqual(self.agenda.listar_horarios_livres("Estruturas de Dados"),
@@ -52,8 +53,9 @@ class TestReservaDeHorario(unittest.TestCase):
         self.agenda.adicionar_horario(horario)
         self.agenda.reservar("Emanuela", horario)
 
-        with self.assertRaises(HorarioOcupadoError):
+        with self.assertRaises(HorarioOcupadoError) as erro:
             self.agenda.reservar("Laura", horario)
+        self.assertIn("ocupado", str(erro.exception))
         self.assertEqual(len(self.agenda.reservas), 1)
 
     def test_horario_cancelado(self):
@@ -63,17 +65,23 @@ class TestReservaDeHorario(unittest.TestCase):
                           self.inicio, estado=CANCELADO)
         self.agenda.adicionar_horario(horario)
 
-        with self.assertRaises(HorarioCanceladoError):
+        with self.assertRaises(HorarioCanceladoError) as erro:
             self.agenda.reservar("Emanuela", horario)
+        self.assertIn("cancelado", str(erro.exception))
         self.assertEqual(len(self.agenda.reservas), 0)
 
     def test_30_minutos(self):
         # Critério 5: o horário termina 30 minutos depois do início
 
         horario = Horario("Cálculo", MONITORES["Cálculo"], datetime(2026, 10, 21, 14, 0))
-
+        self.agenda.adicionar_horario(horario)
+        self.agenda.reservar("Carneiro", horario)
         self.assertEqual(horario.fim(), datetime(2026, 10, 21, 14, 30))
 
+        horario = Horario("Cálculo", MONITORES["Cálculo"], datetime(2026, 10, 21, 14, 45))
+        self.agenda.adicionar_horario(horario)
+        self.agenda.reservar("Neres", horario)
+        self.assertEqual(horario.fim(), datetime(2026, 10, 21, 15, 15))
 
 if __name__ == "__main__":
     unittest.main()
